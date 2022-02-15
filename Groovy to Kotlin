@@ -1,0 +1,213 @@
+Migrating code from your gradle file to project-level
+
+In your project level root create a folder named buildSrc.
+Now create a build.gradle.kts and add the following code :
+
+import org.gradle.kotlin.dsl.`kotlin-dsl`
+
+plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+This code tells the gradle to enable the Kotlin DSL on your project.
+
+To manage your app configurations in the project-level first create an object called AppConfig
+
+object AppConfig {
+    const val compileSDK = 32
+    const val minSdk = 24
+    const val targetSdk = 32
+    const val versionCode = 1
+    const val versionName = "1.0"
+    const val buildToolsVersionApp = "30.0.3"
+
+    const val androidTestInstrumentation = "androidx.test.runner.AndroidJUnitRunner"
+}
+
+Than create another object class called Versions, to help organising your version variables
+
+object Versions {
+    //app
+    const val gradle = "7.1.0"
+    const val kotlin = "1.6.10"
+
+    //google
+    const val googleService = "4.3.8"
+
+    //libs
+    const val appcompat = "1.4.1"
+    const val fragment = "1.3.3"
+    const val navVersion = "2.3.5"
+    const val constraintLayout = "2.1.3"
+    const val material = "1.5.0"
+
+    //test
+    const val junit = "4.12"
+    const val extJunit = "1.1.1"
+    const val espresso = "3.2.0"
+}
+
+Now create another object class called AppDependencies, to holds all your app dependencies 
+
+import Versions
+
+object AppDependencies {
+    //std lib
+    const val kotlinStdLib = "org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}"
+
+    //android 
+    const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
+    const val constraintLayout = "androidx.constraintlayout:constraintlayout:${Versions.constraintLayout}"
+    const val material = "com.google.android.material:material:${Versions.material}"
+    const val fragmentKtx = "androidx.fragment:fragment-ktx:${Versions.fragment}"
+    ...
+    
+    //test libs
+    const val junit = "junit:junit:${Versions.junit}"
+    const val extJUnit = "androidx.test.ext:junit:${Versions.extJunit}"
+    const val espressoCore = "androidx.test.espresso:espresso-core:${Versions.espresso}"
+    
+    ...
+}
+
+Now we can actually migrate the gradle code to a kotlin code.
+
+
+Rename all your .gradle exentions files to .gradle.kts
+
+  
+On your settings.gradle (.kts) file change :
+
+Groovy (settings.gradle) :
+include ':app'
+include ':ui'
+...
+
+Kotlin (settings.gradle.kts) : 
+include(":app", ":ui", ...)
+
+  
+On your build.gradle (.kts) Project level change all :
+
+Groovy (build.gradle) : 
+ext.kotlin = "1.6.10"
+...
+
+classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin"
+...
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+Kotlin (build.gradle.kts) : 
+classpath (org.jetbrains.kotlin:kotlin-gradle-plugin:${Versions.kotlin})
+...
+
+tasks.register("clean", Delete::class) {
+    delete(rootProject.buildDir)
+}
+
+
+On your build.gradle (.kts) APP level change :
+
+Groovy (build.gradle) : 
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+...
+
+Kotlin (build.gradle.kts) : 
+plugins {
+    id("com.android.application")
+    kotlin("android")
+    kotlin("android.extensions")
+    ...
+}
+
+OR 
+
+apply(plugin = "com.android.application")
+...
+
+
+Groovy (build.gradle) : 
+android {
+    compileSdkVersion 32
+    buildToolsVersion “30.0.3”
+
+    defaultConfig {
+        applicationId "com.example.groovytokotlin”
+        minSdkVersion 24
+        targetSdkVersion 32
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    ...
+    
+Kotlin (build.gradle.kts) : 
+android {
+    compileSdk = AppConfig.compileSDK
+    buildToolsVersion = AppConfig.buildToolsVersionApp
+
+    defaultConfig {
+        applicationId = "com.example.groovytokotlin”
+        minSdk = AppConfig.minSdk
+        targetSdk = AppConfig.targetSdk
+        versionCode = AppConfig.versionCode
+        versionName = AppConfig.versionName
+
+        testInstrumentationRunner = AppConfig.androidTestInstrumentation
+    }
+    ...
+    
+ 
+ 
+Groovy (build.gradle) : 
+buildTypes {
+    release {
+        minifyEnabled false
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+}
+
+compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+}
+
+Kotlin (build.gradle.kts) : 
+buildTypes {
+    getByName("release") {
+        isMinifyEnabled = false
+        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+    }
+}
+
+compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+
+
+Groovy (build.gradle) : 
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation "androidx.constraintlayout:constraintlayout:$constraintLayout"
+    ...
+    
+Kotlin (build.gradle.kts) : 
+dependencies {
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    implementation(AppDependencies.appcompat)
+    implementation(AppDependencies.constraintLayout)
+    ... 
